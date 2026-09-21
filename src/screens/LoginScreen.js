@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
+import { assetUrl } from '../api/client'
+import { getSettings } from '../api/settings'
 import { useAuth } from '../context/AuthContext'
 import { colors } from '../theme/colors'
 
@@ -18,6 +21,23 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [settings, setSettings] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+
+    getSettings()
+      .then((data) => {
+        if (mounted) setSettings(data)
+      })
+      .catch(() => {
+        if (mounted) setSettings(null)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   async function handleLogin() {
     setError('')
@@ -38,7 +58,14 @@ export default function LoginScreen({ navigation }) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.card}>
-        <Text style={styles.logo}>🍔 GrillVibes POS</Text>
+        {!!settings?.logo && (
+          <Image
+            source={{ uri: assetUrl(settings.logo) }}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+        )}
+        <Text style={styles.logo}>{settings?.company || settings?.name || 'GrillVibes'} POS</Text>
         <Text style={styles.subtitle}>Sign in to start a shift</Text>
 
         {!!error && <Text style={styles.error}>{error}</Text>}
@@ -84,6 +111,13 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
+  },
+  logoImage: {
+    width: 132,
+    height: 132,
+    alignSelf: 'center',
+    marginBottom: 12,
+    borderRadius: 16,
   },
   logo: { fontSize: 26, fontWeight: '800', color: colors.text, textAlign: 'center' },
   subtitle: { fontSize: 14, color: colors.textMuted, textAlign: 'center', marginTop: 4, marginBottom: 24 },

@@ -5,8 +5,16 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#ffffff"
+    },
     "android": {
       "package": "com.infinicode.grillvibes"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "66ffded4-e199-43a9-a1c3-b126b98000bd"
+      }
     }
   }
 }

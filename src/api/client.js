@@ -6,7 +6,14 @@
 // - Testing on an ANDROID EMULATOR: use 'http://10.0.2.2:8000/api'
 //   (this is the emulator's special alias for your computer's localhost).
 // - Production: your real domain, e.g. 'https://infinicodesystem.site/api'.
-const BASE_URL = 'http://127.0.0.1:8000/api'
+const API_ORIGIN = 'https://grillvibes.space'
+const BASE_URL = `${API_ORIGIN}/api`
+
+export function assetUrl(path) {
+  if (!path) return ''
+  if (/^https?:\/\//i.test(path)) return path
+  return `${API_ORIGIN}/${String(path).replace(/^\/+/, '')}`
+}
 
 export async function apiRequest(path, options = {}, token) {
   const response = await fetch(`${BASE_URL}${path}`, {

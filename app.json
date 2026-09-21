@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "GrillVibes",
+    "slug": "grillvibes-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.infinicode.grillvibes"
+    }
+  }
+}

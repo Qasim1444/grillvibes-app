@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import { getOrder, deleteOrder, getReceipt } from '../../api/orders'
 import { useAuth } from '../../context/AuthContext'
 import { colors } from '../../theme/colors'
+import { formatPkr } from '../../utils/format'
 
 export default function OrderDetailScreen({ route, navigation }) {
   const { orderId } = route.params
@@ -86,7 +87,7 @@ export default function OrderDetailScreen({ route, navigation }) {
           Paid: <Text style={styles.bold}>{order?.paid ? 'Yes' : 'No'}</Text>
         </Text>
         <Text style={styles.row}>
-          Grand Total: <Text style={styles.bold}>${Number(order?.grand_total || 0).toFixed(2)}</Text>
+          Grand Total: <Text style={styles.bold}>{formatPkr(order?.grand_total)}</Text>
         </Text>
       </View>
 
@@ -99,7 +100,7 @@ export default function OrderDetailScreen({ route, navigation }) {
             <Text style={styles.itemName}>
               {item.quantity}× {item.fooditem?.name || `Item #${item.fooditems_id}`}
             </Text>
-            <Text style={styles.itemPrice}>${Number(item.sub_total || 0).toFixed(2)}</Text>
+            <Text style={styles.itemPrice}>{formatPkr(item.sub_total)}</Text>
           </View>
         )}
       />

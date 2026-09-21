@@ -21,16 +21,57 @@ const REPORTS = [
   { key: 'categoryQty', label: 'Category Sales by Item Qty' },
 ]
 
+const pkrFormatter = new Intl.NumberFormat('en-PK', {
+  style: 'currency',
+  currency: 'PKR',
+  maximumFractionDigits: 0,
+})
+
+function titleize(key) {
+  return String(key)
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .trim()
+}
+
+function isMoneyKey(key) {
+  if (/count|id|number|phone|qty|quantity/i.test(key)) return false
+  return /amount|balance|cash|discount|due|grand|paid|payment|price|profit|sale|subtotal|tax|total/i.test(key)
+}
+
+function isDateKey(key) {
+  return /date|time|created|updated|at$/i.test(key)
+}
+
+function formatDateTime(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+
+  return new Intl.DateTimeFormat('en-PK', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+}
+
+function formatValue(key, value) {
+  if (value == null || value === '') return '-'
+  if (isMoneyKey(key) && !Number.isNaN(Number(value))) return pkrFormatter.format(Number(value))
+  if (isDateKey(key)) return formatDateTime(value)
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  return String(value)
+}
+
 // Renders any JSON-ish value as readable rows, since exact report shapes
 // aren't fully specified in the API docs.
-function ReportOutput({ data }) {
+function ReportOutput({ data, parentKey = '' }) {
   if (data == null) return null
   if (Array.isArray(data)) {
     return (
       <View>
         {data.map((row, idx) => (
           <View key={idx} style={styles.row}>
-            <ReportOutput data={row} />
+            <Text style={styles.rowTitle}>{titleize(parentKey || 'item')} #{idx + 1}</Text>
+            <ReportOutput data={row} parentKey={parentKey} />
           </View>
         ))}
       </View>
@@ -40,17 +81,22 @@ function ReportOutput({ data }) {
     return (
       <View>
         {Object.entries(data).map(([key, value]) => (
-          <View key={key} style={styles.kvRow}>
-            <Text style={styles.kvKey}>{key.replace(/_/g, ' ')}</Text>
-            <Text style={styles.kvValue}>
-              {typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)}
-            </Text>
-          </View>
+          typeof value === 'object' && value !== null ? (
+            <View key={key} style={styles.section}>
+              <Text style={styles.sectionTitle}>{titleize(key)}</Text>
+              <ReportOutput data={value} parentKey={key} />
+            </View>
+          ) : (
+            <View key={key} style={styles.kvRow}>
+              <Text style={styles.kvKey}>{titleize(key)}</Text>
+              <Text style={styles.kvValue}>{formatValue(key, value)}</Text>
+            </View>
+          )
         ))}
       </View>
     )
   }
-  return <Text style={styles.kvValue}>{String(data)}</Text>
+  return <Text style={styles.kvValue}>{formatValue(parentKey, data)}</Text>
 }
 
 export default function ReportsScreen() {
@@ -103,6 +149,12 @@ export default function ReportsScreen() {
     }
   }
 
+  function refreshReport() {
+    if (activeKey && !loading) runReport(activeKey)
+  }
+
+  const activeReport = REPORTS.find((report) => report.key === activeKey)
+
   return (
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs}>
@@ -116,6 +168,17 @@ export default function ReportsScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      <View style={styles.toolbar}>
+        <Text style={styles.toolbarTitle}>{activeReport?.label || 'Reports'}</Text>
+        <TouchableOpacity
+          style={[styles.refreshButton, (!activeKey || loading) && styles.refreshButtonDisabled]}
+          onPress={refreshReport}
+          disabled={!activeKey || loading}
+        >
+          <Text style={styles.refreshButtonText}>{loading ? 'Loading...' : 'Refresh'}</Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView style={styles.results} contentContainerStyle={{ padding: 16 }}>
         {loading && <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 30 }} />}
@@ -148,12 +211,38 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   tabText: { color: colors.text, fontWeight: '600', fontSize: 12 },
   tabTextActive: { color: '#fff' },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  toolbarTitle: { color: colors.text, fontWeight: '800', fontSize: 16, flex: 1, marginRight: 12 },
+  refreshButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  refreshButtonDisabled: { opacity: 0.55 },
+  refreshButtonText: { color: '#fff', fontWeight: '800', fontSize: 12 },
   results: { flex: 1 },
   card: { backgroundColor: colors.surface, borderRadius: 14, padding: 16 },
   row: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 10, marginBottom: 10 },
-  kvRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  rowTitle: { color: colors.primary, fontSize: 12, fontWeight: '800', marginBottom: 8, textTransform: 'uppercase' },
+  section: { marginBottom: 12 },
+  sectionTitle: { color: colors.text, fontWeight: '800', fontSize: 15, marginBottom: 8 },
+  kvRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   kvKey: { color: colors.textMuted, fontSize: 13, textTransform: 'capitalize', flex: 1 },
-  kvValue: { color: colors.text, fontSize: 13, fontWeight: '600', flex: 1, textAlign: 'right' },
+  kvValue: { color: colors.text, fontSize: 13, fontWeight: '600', flex: 1.35, textAlign: 'right' },
   placeholder: { color: colors.textMuted, textAlign: 'center', marginTop: 40 },
   error: { color: colors.danger, textAlign: 'center', marginTop: 20 },
 })

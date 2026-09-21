@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import { listOrders } from '../../api/orders'
 import { useAuth } from '../../context/AuthContext'
 import { colors } from '../../theme/colors'
+import { formatPkr } from '../../utils/format'
 
 function orderTotal(order) {
   if (order.grand_total != null) return Number(order.grand_total)
@@ -69,7 +70,7 @@ export default function OrdersScreen({ navigation }) {
                 {item.type || 'dining'} · {item.status || 'pending'} · {item.paid ? 'Paid' : 'Unpaid'}
               </Text>
             </View>
-            <Text style={styles.orderTotal}>${orderTotal(item).toFixed(2)}</Text>
+            <Text style={styles.orderTotal}>{formatPkr(orderTotal(item))}</Text>
           </TouchableOpacity>
         )}
         ListEmptyComponent={<Text style={styles.empty}>No orders yet. Pull down to refresh.</Text>}

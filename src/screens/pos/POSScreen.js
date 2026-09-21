@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { getFoodCategories, getFoodItems } from '../../api/menu'
@@ -16,9 +17,11 @@ import { getCustomers } from '../../api/customers'
 import { getKdsStations, getPosBootstrap } from '../../api/pos'
 import { useAuth } from '../../context/AuthContext'
 import { colors } from '../../theme/colors'
+import { formatPkr } from '../../utils/format'
 
 export default function POSScreen({ navigation }) {
   const { token } = useAuth()
+  const { width } = useWindowDimensions()
   const [categories, setCategories] = useState([])
   const [items, setItems] = useState([])
   const [places, setPlaces] = useState([])
@@ -32,6 +35,8 @@ export default function POSScreen({ navigation }) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
+
+  const columnCount = width >= 900 ? 4 : width >= 620 ? 3 : 2
 
   const load = useCallback(async () => {
     try {
@@ -168,9 +173,10 @@ export default function POSScreen({ navigation }) {
       />
 
       <FlatList
+        key={columnCount}
         data={filteredItems}
         keyExtractor={(item) => String(item.id)}
-        numColumns={2}
+        numColumns={columnCount}
         columnWrapperStyle={{ gap: 12 }}
         contentContainerStyle={{ gap: 12, paddingBottom: cartCount > 0 ? 100 : 20 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
@@ -180,7 +186,7 @@ export default function POSScreen({ navigation }) {
             <Text style={styles.itemName} numberOfLines={2}>
               {item.name}
             </Text>
-            <Text style={styles.itemPrice}>${Number(item.price).toFixed(2)}</Text>
+            <Text style={styles.itemPrice}>{formatPkr(item.price)}</Text>
             {!!cart[item.id] && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{cart[item.id]}</Text>
@@ -193,7 +199,7 @@ export default function POSScreen({ navigation }) {
       {cartCount > 0 && (
         <TouchableOpacity style={styles.cartButton} onPress={goToCart}>
           <Text style={styles.cartButtonText}>
-            View Cart · {cartCount} items · ${cartSubtotal.toFixed(2)}
+            View Cart - {cartCount} items - {formatPkr(cartSubtotal)}
           </Text>
         </TouchableOpacity>
       )}
@@ -202,7 +208,7 @@ export default function POSScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, padding: 16, paddingTop: 50 },
+  container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 14, paddingTop: 44 },
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   search: {
     backgroundColor: colors.surface,
@@ -213,7 +219,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   tabs: { marginBottom: 12, flexGrow: 0 },
   tab: {
@@ -231,13 +237,15 @@ const styles = StyleSheet.create({
   itemCard: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 14,
-    minHeight: 90,
+    borderRadius: 12,
+    padding: 12,
+    minHeight: 104,
     justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  itemName: { fontSize: 14, fontWeight: '700', color: colors.text },
-  itemPrice: { fontSize: 13, color: colors.textMuted, marginTop: 6 },
+  itemName: { fontSize: 14, fontWeight: '700', color: colors.text, paddingRight: 22, lineHeight: 18 },
+  itemPrice: { fontSize: 13, color: colors.primary, fontWeight: '800', marginTop: 10 },
   badge: {
     position: 'absolute',
     top: 8,
@@ -254,9 +262,9 @@ const styles = StyleSheet.create({
   empty: { color: colors.textMuted, textAlign: 'center', marginTop: 40 },
   cartButton: {
     position: 'absolute',
-    bottom: 20,
-    left: 16,
-    right: 16,
+    bottom: 16,
+    left: 14,
+    right: 14,
     backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 16,
@@ -266,6 +274,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 4,
   },
-  cartButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  cartButtonText: { color: '#fff', fontWeight: '700', fontSize: 14, textAlign: 'center' },
   error: { color: colors.danger, marginBottom: 8, fontSize: 13, textAlign: 'center' },
 })

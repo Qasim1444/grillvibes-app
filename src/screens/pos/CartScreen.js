@@ -17,11 +17,12 @@ import { createCustomer } from '../../api/customers'
 import { quotePromo } from '../../api/pos'
 import { useAuth } from '../../context/AuthContext'
 import { colors } from '../../theme/colors'
+import { formatPkr } from '../../utils/format'
 
 const ORDER_TYPES = ['dining', 'delivery', 'on-way']
 const STATUSES = ['pending', 'preparing', 'on-way', 'completed']
 
-const money = (value) => `Rs ${Number(value || 0).toFixed(2)}`
+const money = formatPkr
 const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0

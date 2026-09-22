@@ -6,11 +6,6 @@ import { colors } from '../theme/colors'
 
 import POSScreen from '../screens/pos/POSScreen'
 import CartScreen from '../screens/pos/CartScreen'
-import OrdersScreen from '../screens/orders/OrdersScreen'
-import OrderDetailScreen from '../screens/orders/OrderDetailScreen'
-import ReportsScreen from '../screens/reports/ReportsScreen'
-import CustomersScreen from '../screens/customers/CustomersScreen'
-import CustomerFormScreen from '../screens/customers/CustomerFormScreen'
 import ProfileScreen from '../screens/ProfileScreen'
 import ChangePasswordScreen from '../screens/ChangePasswordScreen'
 
@@ -28,24 +23,6 @@ function PosStack() {
   )
 }
 
-function OrdersStack() {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="OrdersList" component={OrdersScreen} options={{ title: 'Orders' }} />
-      <Stack.Screen name="OrderDetail" component={OrderDetailScreen} options={{ title: 'Order Detail' }} />
-    </Stack.Navigator>
-  )
-}
-
-function CustomersStack() {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="CustomersList" component={CustomersScreen} options={{ title: 'Customers' }} />
-      <Stack.Screen name="CustomerForm" component={CustomerFormScreen} options={{ title: 'Customer' }} />
-    </Stack.Navigator>
-  )
-}
-
 function ProfileStack() {
   return (
     <Stack.Navigator>
@@ -57,9 +34,6 @@ function ProfileStack() {
 
 const ICONS = {
   POS: '🍽️',
-  Orders: '🧾',
-  Reports: '📊',
-  Customers: '👥',
   Profile: '👤',
 }
 
@@ -74,9 +48,6 @@ export default function AppTabs() {
       })}
     >
       <Tab.Screen name="POS" component={PosStack} />
-      <Tab.Screen name="Orders" component={OrdersStack} />
-      <Tab.Screen name="Reports" component={ReportsScreen} />
-      <Tab.Screen name="Customers" component={CustomersStack} />
       <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
   )

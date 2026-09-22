@@ -3,10 +3,12 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
   RefreshControl,
   useWindowDimensions,
 } from 'react-native'
@@ -15,9 +17,23 @@ import { getFoodCategories, getFoodItems } from '../../api/menu'
 import { getPlaces } from '../../api/places'
 import { getCustomers } from '../../api/customers'
 import { getKdsStations, getPosBootstrap } from '../../api/pos'
+import { assetUrl } from '../../api/client'
 import { useAuth } from '../../context/AuthContext'
 import { colors } from '../../theme/colors'
 import { formatPkr } from '../../utils/format'
+
+function foodImageUrl(item) {
+  const path =
+    item.image_url ||
+    item.image ||
+    item.photo ||
+    item.picture ||
+    item.thumbnail ||
+    item.food_image ||
+    item.foodimage
+
+  return path ? assetUrl(path) : ''
+}
 
 export default function POSScreen({ navigation }) {
   const { token } = useAuth()
@@ -37,6 +53,9 @@ export default function POSScreen({ navigation }) {
   const [error, setError] = useState('')
 
   const columnCount = width >= 900 ? 4 : width >= 620 ? 3 : 2
+  const gridGap = 12
+  const cardWidth = (width - 28 - gridGap * (columnCount - 1)) / columnCount
+  const categoryTabs = useMemo(() => [{ id: 'all', name: 'All' }, ...categories], [categories])
 
   const load = useCallback(async () => {
     try {
@@ -96,6 +115,7 @@ export default function POSScreen({ navigation }) {
 
   async function onRefresh() {
     setRefreshing(true)
+    setCart({})
     load()
   }
 
@@ -145,55 +165,86 @@ export default function POSScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        style={styles.search}
-        placeholder="Search menu..."
-        placeholderTextColor={colors.textMuted}
-        value={search}
-        onChangeText={setSearch}
-      />
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.search}
+          placeholder="Search menu..."
+          placeholderTextColor={colors.textMuted}
+          value={search}
+          onChangeText={setSearch}
+        />
+        <TouchableOpacity style={styles.refreshButton} onPress={onRefresh} disabled={refreshing}>
+          <Text style={styles.refreshButtonText}>{refreshing ? '...' : 'Refresh'}</Text>
+        </TouchableOpacity>
+      </View>
 
       {!!error && <Text style={styles.error}>{error}</Text>}
 
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={[{ id: 'all', name: 'All' }, ...categories]}
-        keyExtractor={(c) => String(c.id)}
-        style={styles.tabs}
-        contentContainerStyle={{ paddingRight: 12 }}
-        renderItem={({ item: cat }) => (
+      <View style={styles.tabsWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+        >
+          {categoryTabs.map((cat) => (
           <TouchableOpacity
+            key={cat.id}
             style={[styles.tab, activeCategory === cat.id && styles.tabActive]}
             onPress={() => setActiveCategory(cat.id)}
           >
-            <Text style={[styles.tabText, activeCategory === cat.id && styles.tabTextActive]}>{cat.name}</Text>
+            <Text
+              style={[styles.tabText, activeCategory === cat.id && styles.tabTextActive]}
+              numberOfLines={1}
+            >
+              {cat.name}
+            </Text>
           </TouchableOpacity>
-        )}
-      />
+          ))}
+        </ScrollView>
+      </View>
+
+      <Text style={styles.resultCount}>
+        {filteredItems.length} item{filteredItems.length === 1 ? '' : 's'} available
+      </Text>
 
       <FlatList
         key={columnCount}
         data={filteredItems}
         keyExtractor={(item) => String(item.id)}
         numColumns={columnCount}
-        columnWrapperStyle={{ gap: 12 }}
-        contentContainerStyle={{ gap: 12, paddingBottom: cartCount > 0 ? 100 : 20 }}
+        columnWrapperStyle={styles.itemRow}
+        contentContainerStyle={[styles.itemsContent, { paddingBottom: cartCount > 0 ? 100 : 20 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
         ListEmptyComponent={<Text style={styles.empty}>No items found.</Text>}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.itemCard} onPress={() => addToCart(item.id)}>
-            <Text style={styles.itemName} numberOfLines={2}>
-              {item.name}
-            </Text>
-            <Text style={styles.itemPrice}>{formatPkr(item.price)}</Text>
-            {!!cart[item.id] && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{cart[item.id]}</Text>
+        renderItem={({ item }) => {
+          const imageUri = foodImageUrl(item)
+
+          return (
+            <TouchableOpacity
+              style={[styles.itemCard, { width: cardWidth }]}
+              onPress={() => addToCart(item.id)}
+            >
+              {imageUri ? (
+                <Image source={{ uri: imageUri }} style={styles.itemImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.itemImagePlaceholder}>
+                  <Text style={styles.itemImagePlaceholderText}>No Image</Text>
+                </View>
+              )}
+              <View style={styles.itemBody}>
+                <Text style={styles.itemName} numberOfLines={2}>
+                  {item.name}
+                </Text>
+                <Text style={styles.itemPrice}>{formatPkr(item.price)}</Text>
               </View>
-            )}
-          </TouchableOpacity>
-        )}
+              {!!cart[item.id] && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{cart[item.id]}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )
+        }}
       />
 
       {cartCount > 0 && (
@@ -210,7 +261,9 @@ export default function POSScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 14, paddingTop: 44 },
   center: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   search: {
+    flex: 1,
     backgroundColor: colors.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -219,31 +272,61 @@ const styles = StyleSheet.create({
     color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 10,
   },
-  tabs: { marginBottom: 12, flexGrow: 0 },
+  refreshButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minWidth: 82,
+    alignItems: 'center',
+  },
+  refreshButtonText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  tabsWrapper: {
+    height: 44,
+    marginBottom: 8,
+  },
+  tabsContent: {
+    alignItems: 'center',
+    paddingRight: 12,
+  },
   tab: {
+    minHeight: 34,
+    maxWidth: 180,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 17,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   tabText: { color: colors.text, fontWeight: '600', fontSize: 13 },
   tabTextActive: { color: '#fff' },
+  resultCount: { color: colors.textMuted, fontSize: 12, fontWeight: '700', marginBottom: 10 },
+  itemsContent: { gap: 12 },
+  itemRow: { gap: 12 },
   itemCard: {
-    flex: 1,
     backgroundColor: colors.surface,
     borderRadius: 12,
-    padding: 12,
-    minHeight: 104,
-    justifyContent: 'space-between',
+    height: 190,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
   },
+  itemImage: { width: '100%', aspectRatio: 1.7, backgroundColor: colors.background },
+  itemImagePlaceholder: {
+    width: '100%',
+    aspectRatio: 1.7,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemImagePlaceholderText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  itemBody: { flex: 1, padding: 12, justifyContent: 'space-between' },
   itemName: { fontSize: 14, fontWeight: '700', color: colors.text, paddingRight: 22, lineHeight: 18 },
   itemPrice: { fontSize: 13, color: colors.primary, fontWeight: '800', marginTop: 10 },
   badge: {
